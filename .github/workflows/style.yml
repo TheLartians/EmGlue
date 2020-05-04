@@ -1,4 +1,4 @@
-name: Style
+name: Build
 
 on:
   push:

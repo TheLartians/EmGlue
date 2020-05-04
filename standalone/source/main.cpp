@@ -1,15 +1,15 @@
-#include <greeter.h>
+#include <glue/emscripten/state.h>
 
 #include <cxxopts.hpp>
 #include <iostream>
 #include <string>
 #include <unordered_map>
 
-const std::unordered_map<std::string, greeter::LanguageCode> languages{
-    {"en", greeter::LanguageCode::EN},
-    {"de", greeter::LanguageCode::DE},
-    {"es", greeter::LanguageCode::ES},
-    {"fr", greeter::LanguageCode::FR},
+const std::unordered_map<std::string, EmGlue::LanguageCode> languages{
+    {"en", EmGlue::LanguageCode::EN},
+    {"de", EmGlue::LanguageCode::DE},
+    {"es", EmGlue::LanguageCode::ES},
+    {"fr", EmGlue::LanguageCode::FR},
 };
 
 int main(int argc, char** argv) {
@@ -39,8 +39,8 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  greeter::Greeter greeter(name);
-  std::cout << greeter.greet(langIt->second) << std::endl;
+  EmGlue::EmGlue EmGlue(name);
+  std::cout << EmGlue.greet(langIt->second) << std::endl;
 
   return 0;
 }

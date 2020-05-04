@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 # ---- Project ----
 
 # Note: update this to your new project's name and version
-project(Greeter 
+project(EmGlue 
   VERSION 1.0
   LANGUAGES CXX
 )
@@ -26,30 +26,28 @@ CPMAddPackage(
   VERSION 1.2
 )
 
+CPMAddPackage(
+  NAME Glue
+  GITHUB_REPOSITORY TheLartians/Glue
+  VERSION 1.1
+)
+
 # ---- Add source files ----
 
-# Note: globbing sources is considered bad practice as CMake's generators may not detect new files automatically.
-# Keep that in mind when changing files, or explicitly mention them here.
 FILE(GLOB_RECURSE headers CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.h")
 FILE(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp")
 
 # ---- Create library ----
 
-# Note: for header-only libraries change all PUBLIC flags to INTERFACE and create an interface target:
-# add_library(Greeter INTERFACE)  
-# set_target_properties(Greeter PROPERTIES INTERFACE_COMPILE_FEATURES cxx_std_17)
+add_library(EmGlue ${headers} ${sources})
 
-add_library(Greeter ${headers} ${sources})
+set_target_properties(EmGlue PROPERTIES CXX_STANDARD 17)
 
-set_target_properties(Greeter PROPERTIES CXX_STANDARD 17)
+target_compile_options(EmGlue PUBLIC "$<$<BOOL:${MSVC}>:/permissive->")
 
-# beeing a cross-platform target, we enforce standards conformance on MSVC
-target_compile_options(Greeter PUBLIC "$<$<BOOL:${MSVC}>:/permissive->")
+target_link_libraries(EmGlue PUBLIC Glue)
 
-# Link dependencies (if required)
-# target_link_libraries(Greeter PUBLIC cxxopts)
-
-target_include_directories(Greeter
+target_include_directories(EmGlue
   PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include/${PROJECT_NAME}-${PROJECT_VERSION}>
