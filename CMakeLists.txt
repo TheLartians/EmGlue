@@ -19,17 +19,16 @@ endif()
 
 include(cmake/CPM.cmake)
 
-# PackageProject.cmake will be used to make our target installable
-CPMAddPackage(
-  NAME PackageProject.cmake
-  GITHUB_REPOSITORY TheLartians/PackageProject.cmake
-  VERSION 1.2
-)
-
 CPMAddPackage(
   NAME Glue
   GITHUB_REPOSITORY TheLartians/Glue
   VERSION 1.1
+)
+
+CPMAddPackage(
+  NAME EasyIterator
+  VERSION 1.4
+  GITHUB_REPOSITORY TheLartians/EasyIterator
 )
 
 # ---- Add source files ----
@@ -51,16 +50,4 @@ target_include_directories(EmGlue
   PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include/${PROJECT_NAME}-${PROJECT_VERSION}>
-)
-
-# ---- Create an installable target ----
-# this allows users to install and find the library via `find_package()`.
-
-packageProject(
-  NAME ${PROJECT_NAME}
-  VERSION ${PROJECT_VERSION}
-  BINARY_DIR ${PROJECT_BINARY_DIR}
-  INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include
-  INCLUDE_DESTINATION include/${PROJECT_NAME}-${PROJECT_VERSION}
-  DEPENDENCIES ""
 )

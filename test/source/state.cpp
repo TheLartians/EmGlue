@@ -8,20 +8,26 @@ TEST_CASE("State") {
 
   CHECK_NOTHROW(state.run("console.assert(1==1)"));
   CHECK_THROWS(state.run("syntax(error]"));
+  CHECK_THROWS(state.run("throw new Error()"));
   CHECK_THROWS(state.run("syntax(error]"));
 
   CHECK(state.get<int>("2+3") == 5);
   CHECK(state.get<std::string>("'a' + 'b'") == "ab");
   CHECK(state.get<bool>("true") == true);
-  REQUIRE(state.run("({a: 1, b: 2})").asMap());
-  CHECK(state.run("({a: 1, b: 2})").asMap()["a"]->get<int>() == 1);
-  CHECK(state.run("({a: 1, b: 2})").asMap()["b"]->get<int>() == 2);
+  REQUIRE(state.run("({a: 1, b: '2'})").asMap());
+  CHECK(state.run("({a: 1, b: '2'})").asMap().keys().size() == 2);
+  CHECK(state.run("({a: 1, b: '2'})").asMap()["a"]->get<int>() == 1);
+  CHECK(state.run("({a: 1, b: '2'})").asMap()["b"]->get<std::string>() == "2");
   CHECK(state.run("(function(a,b){ return a+b })").asFunction()(3, 4).get<int>() == 7);
 }
 
 TEST_CASE("Mapped Values") {
   glue::emscripten::State state;
   glue::MapValue root = state.root();
+
+  state.run("check = function(v){ if (!v) throw new Error('Assertion failed'); }");
+  CHECK_NOTHROW(state.run("check(true);"));
+  CHECK_THROWS(state.run("check(false);"));
 
   SUBCASE("primitives") {
     CHECK_NOTHROW(root["x"] = 42);
@@ -39,12 +45,10 @@ TEST_CASE("Mapped Values") {
   SUBCASE("callbacks") {
     CHECK_NOTHROW(root["f"] = [](int x) { return 42 + x; });
     auto view = glue::View(root);
-    state.run("let args = new Module.AnyArguments(); f.call(args); args.delete();");
-
     REQUIRE(root["f"].asFunction());
     CHECK(root["f"].asFunction()(3).get<int>() == 45);
     CHECK(state.get<int>("f(10)") == 52);
-    CHECK_NOTHROW(state.run("function g(a,b) return a+b end"));
+    CHECK_NOTHROW(state.run("g = function(a,b){ return a+b; }"));
     CHECK(root["g"].asFunction()(2, 3).get<int>() == 5);
   }
 
@@ -62,12 +66,8 @@ TEST_CASE("Mapped Values") {
     CHECK_NOTHROW(root["a"]->get<A &>().value = 3);
     CHECK(root["a"]->get<const A &>().value == 3);
     CHECK(counter == 1);
-    root["a"] = glue::Any();
+    state.run("a.delete()");
     CHECK(counter == 0);
-  }
-
-  SUBCASE("standard library") {
-    CHECK(root["tostring"].asFunction()(42).get<std::string>() == "42");
   }
 
   SUBCASE("maps") {
@@ -75,6 +75,8 @@ TEST_CASE("Mapped Values") {
     map["a"] = 44;
     map["b"] = [](int a, int b) { return a + b; };
     CHECK_NOTHROW(root["map"] = map);
+    CHECK_NOTHROW(state.run("check(map.a == 44)"));
+    CHECK_NOTHROW(state.run("check(map.b(2,3) == 5)"));
     REQUIRE(root["map"].asMap());
     CHECK(root["map"].asMap().keys().size() == 2);
     CHECK(root["map"].asMap()["a"]->get<int>() == 44);
@@ -89,21 +91,31 @@ TEST_CASE("Passthrough arguments") {
   root["f"] = [](glue::Any v) { return v; };
   CHECK(root["f"].asFunction()(46).get<int>() == 46);
   CHECK(root["f"].asFunction()("hello").get<std::string>() == "hello");
-  CHECK_NOTHROW(state.run("assert(f(47) == 47)"));
-  CHECK_NOTHROW(state.run("assert(f('test') == 'test')"));
-  CHECK_NOTHROW(state.run("x = {a: 1,b: 2}; assert(f(x) == x)"));
-  CHECK_NOTHROW(state.run("x = {1,2}; assert(f(x) == x)"));
-  CHECK_NOTHROW(state.run("x = function(){}; assert(f(x) == x)"));
-  CHECK_NOTHROW(state.run("x = nil; assert(f(x) == x)"));
+  CHECK_NOTHROW(state.run("check(f(47) == 47)"));
+  CHECK_NOTHROW(state.run("check(f('test') == 'test')"));
+  CHECK_NOTHROW(state.run("x = {a: 1,b: 2}; check(f(x) == x)"));
+  CHECK_NOTHROW(state.run("x = [1,2]; check(f(x) == x)"));
+  CHECK_NOTHROW(state.run("x = function(){}; check(f(x) == x)"));
+  CHECK_NOTHROW(state.run("x = undefined; check(f(x) == x)"));
 }
 
 TEST_CASE("Modules") {
+  static int instanceCount = 0;
+
+  struct InstanceTracker {
+    InstanceTracker() { instanceCount++; }
+    InstanceTracker(const InstanceTracker &) { instanceCount++; }
+    InstanceTracker(InstanceTracker &&) { instanceCount++; }
+    ~InstanceTracker() { instanceCount--; }
+  };
+
   struct A {
     std::string member;
+    InstanceTracker tracker;
   };
 
   struct B : public A {
-    B(std::string value) : A{value} {}
+    B(std::string value) : A{value, {}} {}
     int method(int v) { return int(member.size()) + v; }
   };
 
@@ -120,13 +132,33 @@ TEST_CASE("Modules") {
                     .addMethod("method", &B::method);
 
   module["createB"] = []() { return B("unnamed"); };
+  module["getMember"] = [](const A &a) { return a.member; };
 
   glue::emscripten::State state;
   state.addModule(module);
 
-  CHECK(state.run("local a = inner.A.__new(); a.setMember('testA'); return a.member()")
-            ->as<std::string>()
-        == "testA");
-  CHECK(state.run("local b = B.__new('testB'); return b.member()")->as<std::string>() == "testB");
-  CHECK(state.run("local b = createB(); return b.member()")->as<std::string>() == "unnamed");
+  CHECK_NOTHROW(state.run("a = new inner.A()"));
+  CHECK_NOTHROW(state.run("a.setMember('testA')"));
+  CHECK(state.run("a instanceof inner.A")->as<bool>());
+  CHECK(state.run("a.member()")->as<std::string>() == "testA");
+  CHECK(state.run("getMember(a)")->as<std::string>() == "testA");
+  CHECK(instanceCount > 0);
+  CHECK_NOTHROW(state.run("a.delete()"));
+  CHECK(instanceCount == 0);
+
+  CHECK_NOTHROW(state.run("b = new B('testB')"));
+  CHECK(state.run("b instanceof inner.A")->as<bool>());
+  CHECK(state.run("b instanceof B")->as<bool>());
+  CHECK(state.run("b.member()")->as<std::string>() == "testB");
+  CHECK(state.run("getMember(b)")->as<std::string>() == "testB");
+  CHECK(instanceCount > 0);
+  CHECK_NOTHROW(state.run("b.delete()"));
+  CHECK(instanceCount == 0);
+
+  CHECK_NOTHROW(state.run("b = createB();"));
+  CHECK(state.run("b.member()")->as<std::string>() == "unnamed");
+  CHECK(state.run("getMember(b)")->as<std::string>() == "unnamed");
+  CHECK(instanceCount > 0);
+  CHECK_NOTHROW(state.run("b.delete();"));
+  CHECK(instanceCount == 0);
 }
