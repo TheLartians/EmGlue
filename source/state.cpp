@@ -100,7 +100,8 @@ EMSCRIPTEN_BINDINGS(glue_bindings) {
       return C;
     };
 
-    Module.__glueGlobal = global;
+    Module.__glueGlobal = this;
+    Module.__glueModule = Module;
   ,);
 
 #else
@@ -198,7 +199,8 @@ Module.__glueCreateClass = function (members) {
   return C;
 };
 
-Module.__glueGlobal = global;
+Module.__glueGlobal = this;
+Module.__glueModule = Module;
   ,);
 #endif
 
@@ -214,6 +216,7 @@ Module.__glueGlobal = global;
         auto getFunctionWrapper() { return Value::module_property("__glueFunctionWrapper"); }
         auto getIsAnyCheck() { return Value::module_property("__glueIsAny"); }
         auto getGlobalObject() { return Value::module_property("__glueGlobal"); }
+        auto getModuleObject() { return Value::module_property("__glueModule"); }
         auto getCreateClass() { return Value::module_property("__glueCreateClass"); }
         auto &getContext() { return Value::module_property("__glueContext").as<Context &>(); }
 
@@ -404,11 +407,12 @@ Module.__glueGlobal = global;
 
   struct State::Data {
     detail::Value runCallback;
-    std::shared_ptr<detail::JSMap> globalObject;
+    std::shared_ptr<detail::JSMap> globalObject, moduleObject;
 
     Data()
         : runCallback(detail::getScriptRunner()),
-          globalObject(std::make_shared<detail::JSMap>(detail::getGlobalObject())) {}
+          globalObject(std::make_shared<detail::JSMap>(detail::getGlobalObject())),
+          moduleObject(std::make_shared<detail::JSMap>(detail::getModuleObject())) {}
   };
 
   State::State() : data(std::make_unique<State::Data>()) {}
@@ -421,12 +425,13 @@ Module.__glueGlobal = global;
 
   glue::MapValue State::root() const { return glue::MapValue(data->globalObject); }
 
-  void State::addModule(const MapValue &map) const {
+  glue::MapValue State::moduleRoot() const { return glue::MapValue(data->moduleObject); }
+
+  void State::addModule(const MapValue &map, const MapValue &r) const {
     detail::ObjectCache cache;
     auto convertedMap = Value(detail::jsToAny(detail::anyToJS(map.data, &cache))).asMap();
     assert(convertedMap);
 
-    auto r = root();
     convertedMap.forEach([&](auto &&key, auto &&value) {
       r[key] = value;
       return false;

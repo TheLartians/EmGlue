@@ -138,7 +138,7 @@ TEST_CASE("Modules") {
   module["getMember"] = [](const A &a) { return a.member; };
 
   glue::emscripten::State state;
-  state.addModule(module);
+  state.addModule(module, state.root());
 
   CHECK_NOTHROW(state.run("a = new inner.A()"));
   CHECK_NOTHROW(state.run("a.setMember('testA')"));

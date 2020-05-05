@@ -33,9 +33,19 @@ namespace glue {
       MapValue root() const;
 
       /**
-       * Adds a module to the global table.
+       * returns the value map of the modules root table.
        */
-      void addModule(const MapValue &map) const;
+      MapValue moduleRoot() const;
+
+      /**
+       * Adds a module to the Module table.
+       */
+      void addModule(const MapValue &map) const { addModule(map, moduleRoot()); }
+
+      /**
+       * Adds a module to the target table.
+       */
+      void addModule(const MapValue &map, const MapValue &root) const;
     };
 
   }  // namespace emscripten
