@@ -122,7 +122,10 @@ TEST_CASE("Modules") {
   auto module = glue::createAnyMap();
   auto inner = glue::createAnyMap();
 
-  inner["A"] = glue::createClass<A>().addConstructor<>().addMember("member", &A::member);
+  inner["A"] = glue::createClass<A>()
+                   .addConstructor<>()
+                   .addMember("member", &A::member)
+                   .addMethod("staticMethod", []() { return 42; });
 
   module["inner"] = inner;
 
@@ -145,6 +148,8 @@ TEST_CASE("Modules") {
   CHECK(instanceCount > 0);
   CHECK_NOTHROW(state.run("a.delete()"));
   CHECK(instanceCount == 0);
+
+  CHECK(state.run("inner.A.staticMethod()")->get<int>() == 42);
 
   CHECK_NOTHROW(state.run("b = new B('testB')"));
   CHECK(state.run("b instanceof inner.A")->as<bool>());

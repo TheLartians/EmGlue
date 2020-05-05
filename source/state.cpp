@@ -45,12 +45,9 @@ EMSCRIPTEN_BINDINGS(glue_bindings) {
 
   // clang-format off
 
-/**
- * The content of the EM_ASM below is a backwards-compatible version of the following ES2016 code.
- */
+#if defined(USE_ES6_CODE)
 
-/* 
-
+  EM_ASM(
     Module.__glueScriptRunner = function(code) {
       try {
         return eval(code);
@@ -95,6 +92,7 @@ EMSCRIPTEN_BINDINGS(glue_bindings) {
         C.prototype[key] = function(...args){ 
           return member(this.__glue_instance, ...args);
         };
+        C[key] = member;
       }
       members['__constructWithValue'] = function(value){
         return new C("__glue_use_value" ,value);
@@ -102,8 +100,13 @@ EMSCRIPTEN_BINDINGS(glue_bindings) {
       return C;
     };
 
-    Module.__glueGlobal = this;
-*/
+    Module.__glueGlobal = global;
+  ,);
+
+#else
+/**
+ * The content of the EM_ASM below is a backwards-compatible version of the readable code above.
+ */
 
   EM_ASM(
 function _instanceof(left, right) { if (right != null && typeof Symbol !== "undefined" && right[Symbol.hasInstance]) { return !!right[Symbol.hasInstance](left); } else { return left instanceof right; } }
@@ -180,6 +183,8 @@ Module.__glueCreateClass = function (members) {
 
       return member.apply(void 0, [this.__glue_instance].concat(args));
     };
+
+    C[key] = member;
   };
 
   for (var key in members) {
@@ -195,6 +200,8 @@ Module.__glueCreateClass = function (members) {
 
 Module.__glueGlobal = global;
   ,);
+#endif
+
   // clang-format on
   }
 
