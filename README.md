@@ -15,7 +15,7 @@ Check the [API](include/glue/emscripten/state.h) and [tests](test/source/state.c
 ### Include in your project
 
 EmGlue can be easily integrated through CPM.
-If not available before, this will automatically add a Lua and Glue target as well.
+If not available before, this will automatically add the Glue target as well.
 
 ```cmake
 CPMAddPackage(
@@ -28,6 +28,8 @@ target_link_libraries(myLibrary EmGlue)
 ```
 
 ### Build and run tests
+
+First, [install and activate](https://emscripten.org/docs/getting_started/downloads.html) the emsdk.
 
 ```bash
 emcmake cmake -Htest -Bbuild
