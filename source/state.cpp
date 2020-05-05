@@ -44,23 +44,29 @@ EMSCRIPTEN_BINDINGS(glue_bindings) {
   constant("__glueContext", glue::Context());
 
   // clang-format off
-  EM_ASM(
+
+/**
+ * The content of the EM_ASM below is a backwards-compatible version of the following ES2016 code.
+ */
+
+/* 
+
     Module.__glueScriptRunner = function(code) {
       try {
         return eval(code);
       } catch (e) {
-        return {__glue_error: e.toString()};
+        return {__glue_error: String(e)};
       }
     };
 
-    Module.__glueInvoker = function(callback, arguments) {
-      return callback(...arguments);
+    Module.__glueInvoker = function(callback, args) {
+      return callback(...args);
     };
 
     Module.__glueFunctionWrapper = function(callback) {
       const invoker = Module.invokeAnyFunction;
-      return function(...arguments) {
-        return invoker(callback, arguments);
+      return function(...args) {
+        return invoker(callback, args);
       }
     };
 
@@ -97,6 +103,97 @@ EMSCRIPTEN_BINDINGS(glue_bindings) {
     };
 
     Module.__glueGlobal = this;
+*/
+
+  EM_ASM(
+function _instanceof(left, right) { if (right != null && typeof Symbol !== "undefined" && right[Symbol.hasInstance]) { return !!right[Symbol.hasInstance](left); } else { return left instanceof right; } }
+
+function _toConsumableArray(arr) { return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _unsupportedIterableToArray(arr) || _nonIterableSpread(); }
+
+function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+
+function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
+
+function _iterableToArray(iter) { if (typeof Symbol !== "undefined" && Symbol.iterator in Object(iter)) return Array.from(iter); }
+
+function _arrayWithoutHoles(arr) { if (Array.isArray(arr)) return _arrayLikeToArray(arr); }
+
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
+
+Module.__glueScriptRunner = function (code) {
+  try {
+    return eval(code);
+  } catch (e) {
+    return {
+      __glue_error: String(e)
+    };
+  }
+};
+
+Module.__glueInvoker = function (callback, args) {
+  return callback.apply(void 0, _toConsumableArray(args));
+};
+
+Module.__glueFunctionWrapper = function (callback) {
+  var invoker = Module.invokeAnyFunction;
+  return function () {
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    return invoker(callback, args);
+  };
+};
+
+Module.__glueIsAny = function (val) {
+  return _instanceof(val, Module.Any);
+};
+
+Module.__glueCreateClass = function (members) {
+  var constructor = members[Module.constructorKey];
+
+  var C = function C() {
+    if ((arguments.length <= 0 ? undefined : arguments[0]) === "__glue_use_value") {
+      this.__glue_instance = arguments.length <= 1 ? undefined : arguments[1];
+    } else {
+      this.__glue_instance = constructor.apply(void 0, arguments);
+    }
+  };
+
+  if (members[Module.extendsKey]) {
+    C.prototype = Object.create(members[Module.extendsKey].prototype);
+  } else {
+    C.prototype = {
+      delete: function _delete() {
+        this.__glue_instance.delete();
+      }
+    };
+  }
+
+  var _loop = function _loop(key) {
+    var member = members[key];
+
+    C.prototype[key] = function () {
+      for (var _len2 = arguments.length, args = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+        args[_key2] = arguments[_key2];
+      }
+
+      return member.apply(void 0, [this.__glue_instance].concat(args));
+    };
+  };
+
+  for (var key in members) {
+    _loop(key);
+  }
+
+  members['__constructWithValue'] = function (value) {
+    return new C("__glue_use_value", value);
+  };
+
+  return C;
+};
+
+Module.__glueGlobal = global;
   ,);
   // clang-format on
   }
