@@ -45,55 +45,62 @@ EMSCRIPTEN_BINDINGS(glue_bindings) {
   constant("constructorKey", std::string(glue::keys::constructorKey));
   constant("__glueContext", glue::Context());
 
+  // clang-format off
   EM_ASM(
     Module.__glueScriptRunner = function(code) {
-    try {
-      return eval(code);
-    } catch (e) {
-      return {__glue_error : e.toString()};
-    }
+      try {
+        return eval(code);
+      } catch (e) {
+        return {__glue_error: e.toString()};
+      }
     };
 
     Module.__glueInvoker = function(callback, arguments) {
-    return callback(... arguments);
+      return callback(...arguments);
     };
 
     Module.__glueFunctionWrapper = function(callback) {
-    const invoker = Module.invokeAnyFunction;
-    return function(... arguments) { return invoker(callback, arguments); }
+      const invoker = Module.invokeAnyFunction;
+      return function(...arguments) {
+        return invoker(callback, arguments);
+      }
     };
 
     Module.__glueIsAny = function(val) {
-    return val instanceof Module.Any;
+      return val instanceof Module.Any;
     };
 
     Module.__glueCreateClass = function(members) {
-    const constructor = members[Module.constructorKey];
-    const C = function(... args) {
-      if (args[0] == = "__glue_use_value") {
-        this.__glue_instance = args[1];
-      } else {
-        this.__glue_instance = constructor(... args);
-      }
-    };
-    if (members[Module.extendsKey]) {
-      C.prototype = Object.create(members[Module.extendsKey].prototype);
-    } else {
-      C.prototype = { delete : function(){this.__glue_instance.delete();
-    }
+      const constructor = members[Module.constructorKey];
+      const C = function(...args) {
+        if (args[0] === "__glue_use_value") {
+          this.__glue_instance = args[1];
+        } else {
+          this.__glue_instance = constructor(...args);
         }
-}
-for (const key in members) {
-  const member = members[key];
-  C.prototype[key] = function(... args) { return member(this.__glue_instance, ... args); };
-}
-members['__constructWithValue'] = function(value) { return new C("__glue_use_value", value); };
-return C;
-}
-;
+      };
+      if (members[Module.extendsKey]) {
+        C.prototype = Object.create(members[Module.extendsKey].prototype);
+      } else {
+        C.prototype = {
+          delete: function() { this.__glue_instance.delete(); }
+        }
+      }
+      for (const key in members) {
+        const member = members[key];
+        C.prototype[key] = function(...args){ 
+          return member(this.__glue_instance, ...args);
+        };
+      }
+      members['__constructWithValue'] = function(value){
+        return new C("__glue_use_value" ,value);
+      };
+      return C;
+    };
 
-Module.__glueGlobal = this;
+    Module.__glueGlobal = this;
   ,);
+  // clang-format on
   }
 
   namespace glue {
