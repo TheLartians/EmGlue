@@ -39,7 +39,7 @@ set_target_properties(EmGlueTests PROPERTIES CXX_STANDARD 17)
 
 # emscripten-specific flags
 
-set(EMSCRIPTEN_FLAGS "--bind -s DISABLE_EXCEPTION_CATCHING=0")
+set(EMSCRIPTEN_FLAGS "-s DISABLE_EXCEPTION_CATCHING=0")
 set_target_properties(EmGlueTests PROPERTIES COMPILE_FLAGS ${EMSCRIPTEN_FLAGS})
 target_link_libraries(EmGlueTests ${EMSCRIPTEN_FLAGS})
 

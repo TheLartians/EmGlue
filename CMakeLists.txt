@@ -43,6 +43,7 @@ add_library(EmGlue ${headers} ${sources})
 set_target_properties(EmGlue PROPERTIES CXX_STANDARD 17)
 
 target_compile_options(EmGlue PUBLIC "$<$<BOOL:${MSVC}>:/permissive->")
+target_link_options(EmGlue PUBLIC "--bind")
 
 target_link_libraries(EmGlue PUBLIC Glue)
 

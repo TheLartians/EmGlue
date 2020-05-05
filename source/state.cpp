@@ -8,8 +8,6 @@
 
 #include <exception>
 #include <unordered_map>
-// TODO: remove
-#include <iostream>
 
 namespace glue {
   namespace emscripten {
@@ -319,7 +317,7 @@ EMSCRIPTEN_BINDINGS(glue_bindings) {
 
   glue::MapValue State::root() const { return glue::MapValue(data->globalObject); }
 
-  void State::addModule(const MapValue &map) {
+  void State::addModule(const MapValue &map) const {
     detail::ObjectCache cache;
     auto convertedMap = Value(detail::jsToAny(detail::anyToJS(map.data, &cache))).asMap();
     assert(convertedMap);
