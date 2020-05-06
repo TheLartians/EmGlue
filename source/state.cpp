@@ -100,6 +100,7 @@ EMSCRIPTEN_BINDINGS(glue_bindings) {
       return C;
     };
 
+    Module.__glueDeleter = function(v){ v.delete(); };
     Module.__glueGlobal = this;
     Module.__glueModule = Module;
   ,);
@@ -242,8 +243,7 @@ Module.__glueModule = Module;
 
           void set(const std::string &key, const Any &value) { data.set(key, anyToJS(value)); }
 
-          bool forEach(
-              const std::function<bool(const std::string &, const Any &)> &callback) const {
+          bool forEach(const std::function<bool(const std::string &)> &callback) const {
             Value keys = Value::global("Object")["keys"](data);
             size_t i = 0;
             while (true) {
@@ -251,7 +251,7 @@ Module.__glueModule = Module;
               if (key.isUndefined()) {
                 break;
               } else {
-                callback(key.as<std::string>(), jsToAny(data[key]));
+                callback(key.as<std::string>());
               }
               ++i;
             }
@@ -363,8 +363,8 @@ Module.__glueModule = Module;
               return true;
             }
             Value object = Value::object();
-            v.forEach([&](auto &&k, auto &&o) {
-              object.set(k, anyToJS(o, cache));
+            v.forEach([&](auto &&k) {
+              object.set(k, anyToJS(v.get(k), cache));
               return false;
             });
             if (v.get(keys::classKey)) {
