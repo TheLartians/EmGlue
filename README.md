@@ -83,7 +83,7 @@ void exampleModules() {
 Check the [API](include/glue/emscripten/state.h) and [tests](test/source/state.cpp) for functionality and examples.
 See [here](https://github.com/TheLartians/TypeScriptXX) for a full example project using automatic TypeScript declarations.
 
-### Use in your project.
+### Use in your project
 
 EmGlue can be easily integrated through [CPM.cmake](https://github.com/TheLartians/CPM.cmake).
 If not available before, this will automatically add the Glue target as well.
