@@ -48,7 +48,7 @@ namespace glue {
       void addModule(const MapValue &map, const MapValue &root) const;
 
       /**
-       * returns a function to delete lua values
+       * returns a function to delete bound JS values
        */
       Value getValueDeleter() const;
     };
