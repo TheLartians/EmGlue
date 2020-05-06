@@ -46,6 +46,11 @@ namespace glue {
        * Adds a module to the target table.
        */
       void addModule(const MapValue &map, const MapValue &root) const;
+
+      /**
+       * returns a function to delete lua values
+       */
+      Value getValueDeleter() const;
     };
 
   }  // namespace emscripten

@@ -138,6 +138,7 @@ TEST_CASE("Modules") {
   module["getMember"] = [](const A &a) { return a.member; };
 
   glue::emscripten::State state;
+  module["deleteValue"] = state.getValueDeleter();
   state.addModule(module, state.root());
 
   CHECK_NOTHROW(state.run("a = new inner.A()"));
@@ -157,7 +158,7 @@ TEST_CASE("Modules") {
   CHECK(state.run("b.member()")->as<std::string>() == "testB");
   CHECK(state.run("getMember(b)")->as<std::string>() == "testB");
   CHECK(instanceCount > 0);
-  CHECK_NOTHROW(state.run("b.delete()"));
+  CHECK_NOTHROW(state.run("deleteValue(b)"));
   CHECK(instanceCount == 0);
 
   CHECK_NOTHROW(state.run("b = createB();"));

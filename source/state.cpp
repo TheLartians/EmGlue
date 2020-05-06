@@ -9,6 +9,9 @@
 #include <exception>
 #include <unordered_map>
 
+// TODO: remove
+#include <iostream>
+
 namespace glue {
   namespace emscripten {
     namespace detail {
@@ -45,7 +48,7 @@ EMSCRIPTEN_BINDINGS(glue_bindings) {
 
   // clang-format off
 
-#if defined(USE_ES6_CODE)
+#if defined(GLUE_USE_ES6_CODE)
 
   EM_ASM(
     Module.__glueScriptRunner = function(code) {
@@ -200,6 +203,10 @@ Module.__glueCreateClass = function (members) {
   return C;
 };
 
+Module.__glueDeleter = function (v) {
+  v.delete();
+};
+
 Module.__glueGlobal = this;
 Module.__glueModule = Module;
   ,);
@@ -219,6 +226,7 @@ Module.__glueModule = Module;
         auto getGlobalObject() { return Value::module_property("__glueGlobal"); }
         auto getModuleObject() { return Value::module_property("__glueModule"); }
         auto getCreateClass() { return Value::module_property("__glueCreateClass"); }
+        auto getGlueDeleter() { return Value::module_property("__glueDeleter"); }
         auto &getContext() { return Value::module_property("__glueContext").as<Context &>(); }
 
         struct JSFunction {
@@ -437,3 +445,5 @@ Module.__glueModule = Module;
       return false;
     });
   }
+
+  glue::Value State::getValueDeleter() const { return detail::jsToAny(detail::getGlueDeleter()); }
