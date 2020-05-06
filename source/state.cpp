@@ -9,9 +9,6 @@
 #include <exception>
 #include <unordered_map>
 
-// TODO: remove
-#include <iostream>
-
 namespace glue {
   namespace emscripten {
     namespace detail {
