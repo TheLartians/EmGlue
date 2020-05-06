@@ -42,7 +42,7 @@ void exampleBasics() {
   // interact with JS directly
   state.run("console.log(square(x))");
   // or using Glue
-  global["console"].asMap()["log"].asFunction()(global["square"].asFunction()(*global["x"]));
+  global["console"]["log"](global["square"](global["x"]));
 }
 ```
 

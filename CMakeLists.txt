@@ -22,7 +22,7 @@ include(cmake/CPM.cmake)
 CPMAddPackage(
   NAME Glue
   GITHUB_REPOSITORY TheLartians/Glue
-  VERSION 1.2
+  VERSION 1.3.2
 )
 
 CPMAddPackage(
