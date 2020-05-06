@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 
 # Note: update this to your new project's name and version
 project(EmGlue 
-  VERSION 1.0
+  VERSION 0.2
   LANGUAGES CXX
 )
 
@@ -22,7 +22,7 @@ include(cmake/CPM.cmake)
 CPMAddPackage(
   NAME Glue
   GITHUB_REPOSITORY TheLartians/Glue
-  VERSION 1.1
+  VERSION 1.2
 )
 
 CPMAddPackage(
