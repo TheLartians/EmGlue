@@ -57,7 +57,7 @@ void exampleModules() {
   state.run("console.log(a.member());");
   state.run("console.log(a.method());");
   
-  // there are destructors in JavaScript 
+  // there are no destructors in JavaScript 
   // -> be sure to delete your instances after use!
   state.run("a.delete(); a=undefined;");
 }
