@@ -61,13 +61,26 @@ TEST_CASE("Mapped Values") {
       A(const A &) = delete;
       ~A() { counter--; }
     };
-    CHECK_NOTHROW(root["a"] = A{43});
-    CHECK(root["a"]->get<const A &>().value == 43);
-    CHECK_NOTHROW(root["a"]->get<A &>().value = 3);
-    CHECK(root["a"]->get<const A &>().value == 3);
-    CHECK(counter == 1);
-    state.run("a.delete()");
-    CHECK(counter == 0);
+    SUBCASE("Manual memory management") {
+      CHECK_NOTHROW(root["a"] = A{43});
+      CHECK(root["a"]->get<const A &>().value == 43);
+      CHECK_NOTHROW(root["a"]->get<A &>().value = 3);
+      CHECK(root["a"]->get<const A &>().value == 3);
+      CHECK(counter == 1);
+      state.run("a.delete(); a = undefined;");
+      CHECK(counter == 0);
+    }
+    SUBCASE("semi-automatic memory management") {
+      root["setConstructCallback"] = state.getConstructCallbackSetter();
+      state.run("values = []");
+      CHECK_NOTHROW(state.run("setConstructCallback(v => values.push(v));"));
+      CHECK_NOTHROW(root["a"] = A{15});
+      CHECK(root["a"]->get<const A &>().value == 15);
+      CHECK(counter == 1);
+      CHECK_NOTHROW(state.run("check(values.length == 1)"));
+      CHECK_NOTHROW(state.run("for (const v of values) { v.delete(); }"));
+      CHECK(counter == 0);
+    }
   }
 
   SUBCASE("maps") {
@@ -132,6 +145,8 @@ TEST_CASE("Modules") {
   module["B"] = glue::createClass<B>(glue::WithBases<A>())
                     .addConstructor<std::string>()
                     .setExtends(inner["A"])
+                    .addMethod(glue::keys::operators::tostring,
+                               [](const B &b) { return "B(" + b.member + ")"; })
                     .addMethod("method", &B::method);
 
   module["createB"] = []() { return B("unnamed"); };
@@ -164,6 +179,7 @@ TEST_CASE("Modules") {
   CHECK_NOTHROW(state.run("b = createB();"));
   CHECK(state.run("b.member()")->as<std::string>() == "unnamed");
   CHECK(state.run("getMember(b)")->as<std::string>() == "unnamed");
+  CHECK(state.run("String(b)")->as<std::string>() == "B(unnamed)");
   CHECK(instanceCount > 0);
   CHECK_NOTHROW(state.run("b.delete();"));
   CHECK(instanceCount == 0);
