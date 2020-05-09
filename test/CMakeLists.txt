@@ -29,6 +29,10 @@ CPMAddPackage(
   VERSION 1.3
 )
 
+# ---- Enable compiler warnings ----
+
+target_compile_options(EmGlue PUBLIC -Wall -pedantic -Wextra -Werror -Wno-dollar-in-identifier-extension)
+
 # ---- Create binary ----
 
 file(GLOB sources CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp)
@@ -43,6 +47,7 @@ set(EMSCRIPTEN_FLAGS "-s DISABLE_EXCEPTION_CATCHING=0")
 set_target_properties(EmGlueTests PROPERTIES COMPILE_FLAGS ${EMSCRIPTEN_FLAGS})
 target_link_libraries(EmGlueTests ${EMSCRIPTEN_FLAGS})
 
-# enable compiler warnings
-target_compile_options(EmGlue PUBLIC -Wall -pedantic -Wextra -Werror -Wno-dollar-in-identifier-extension)
+# ---- Add tests ----
 
+enable_testing()
+add_test(EmGlueTests node ${CMAKE_CURRENT_BINARY_DIR}/EmGlueTests.js)

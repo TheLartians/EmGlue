@@ -40,6 +40,7 @@ EMSCRIPTEN_BINDINGS(glue_bindings) {
 
   function("invokeAnyFunction", &glue::emscripten::detail::invokeAnyFunction);
   constant("extendsKey", std::string(glue::keys::extendsKey));
+  constant("toStringKey", std::string(glue::keys::operators::tostring));
   constant("constructorKey", std::string(glue::keys::constructorKey));
   constant("__glueContext", glue::Context());
 
@@ -71,6 +72,9 @@ EMSCRIPTEN_BINDINGS(glue_bindings) {
       return val instanceof Module.Any;
     };
 
+    Module.__glueConstructCallback = () => {};
+    Module.__setGlueConstructCallback = (f) => Module.__glueConstructCallback = f;
+
     Module.__glueCreateClass = function(members) {
       const constructor = members[Module.constructorKey];
       const C = function(...args) {
@@ -79,14 +83,22 @@ EMSCRIPTEN_BINDINGS(glue_bindings) {
         } else {
           this.__glue_instance = constructor(...args);
         }
+        Module.__glueConstructCallback(this);
       };
+
       if (members[Module.extendsKey]) {
         C.prototype = Object.create(members[Module.extendsKey].prototype);
       } else {
-        C.prototype = {
+        C.prototype = ({
           delete: function() { this.__glue_instance.delete(); }
-        }
+        })
       }
+  
+      if (members[Module.toStringKey]) {
+        const stringConverter = members[Module.toStringKey];
+        C.prototype.toString = function(){ return stringConverter(this); };
+      }
+
       for (const key in members) {
         const member = members[key];
         C.prototype[key] = function(...args){ 
@@ -154,6 +166,12 @@ Module.__glueIsAny = function (val) {
   return _instanceof(val, Module.Any);
 };
 
+Module.__glueConstructCallback = function () {};
+
+Module.__setGlueConstructCallback = function (f) {
+  return Module.__glueConstructCallback = f;
+};
+
 Module.__glueCreateClass = function (members) {
   var constructor = members[Module.constructorKey];
 
@@ -163,6 +181,8 @@ Module.__glueCreateClass = function (members) {
     } else {
       this.__glue_instance = constructor.apply(void 0, arguments);
     }
+
+    Module.__glueConstructCallback(this);
   };
 
   if (members[Module.extendsKey]) {
@@ -172,6 +192,14 @@ Module.__glueCreateClass = function (members) {
       delete: function _delete() {
         this.__glue_instance.delete();
       }
+    };
+  }
+
+  if (members[Module.toStringKey]) {
+    var stringConverter = members[Module.toStringKey];
+
+    C.prototype.toString = function () {
+      return stringConverter(this);
     };
   }
 
@@ -223,8 +251,12 @@ Module.__glueModule = Module;
         auto getGlobalObject() { return Value::module_property("__glueGlobal"); }
         auto getModuleObject() { return Value::module_property("__glueModule"); }
         auto getCreateClass() { return Value::module_property("__glueCreateClass"); }
+        auto getConstructCallback() { return Value::module_property("__glueConstructCallback"); }
         auto getGlueDeleter() { return Value::module_property("__glueDeleter"); }
         auto &getContext() { return Value::module_property("__glueContext").as<Context &>(); }
+        auto constructCallbackSetter() {
+          return Value::module_property("__setGlueConstructCallback");
+        }
 
         struct JSFunction {
           Value data;
@@ -399,7 +431,9 @@ Module.__glueModule = Module;
                                      .data["__constructWithValue"];
               return constructor(Value(instance.data));
             } else {
-              return Value(any);
+              auto value = Value(any);
+              detail::getConstructCallback()(value);
+              return value;
             }
           }
         }
@@ -444,3 +478,7 @@ Module.__glueModule = Module;
   }
 
   glue::Value State::getValueDeleter() const { return detail::jsToAny(detail::getGlueDeleter()); }
+
+  glue::Value State::getConstructCallbackSetter() const {
+    return detail::jsToAny(detail::constructCallbackSetter());
+  }

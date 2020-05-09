@@ -51,6 +51,12 @@ namespace glue {
        * returns a function to delete bound JS values
        */
       Value getValueDeleter() const;
+
+      /**
+       * Function that sets a callback that gets invoked anytime a new value is constructed.
+       * Useful for automatic memory management.
+       */
+      Value getConstructCallbackSetter() const;
     };
 
   }  // namespace emscripten
