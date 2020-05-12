@@ -45,7 +45,7 @@ EMSCRIPTEN_BINDINGS(glue_bindings) {
   constant("__glueContext", glue::Context());
 
   // clang-format off
-
+#define GLUE_USE_ES6_CODE
 #if defined(GLUE_USE_ES6_CODE)
 
   EM_ASM(
@@ -82,7 +82,7 @@ EMSCRIPTEN_BINDINGS(glue_bindings) {
           this.__glue_instance = args[1];
           Module.__glueConstructCallback(this.__glue_instance);
         } else {
-          this.__glue_instance = constructor(...args);
+          this.__glue_instance = constructor(...args).__glue_instance;
         }
       };
 
@@ -180,7 +180,7 @@ Module.__glueCreateClass = function (members) {
       this.__glue_instance = arguments.length <= 1 ? undefined : arguments[1];
       Module.__glueConstructCallback(this.__glue_instance);
     } else {
-      this.__glue_instance = constructor.apply(void 0, arguments);
+      this.__glue_instance = constructor.apply(void 0, arguments).__glue_instance;
     }
   };
 
