@@ -45,7 +45,6 @@ EMSCRIPTEN_BINDINGS(glue_bindings) {
   constant("__glueContext", glue::Context());
 
   // clang-format off
-#define GLUE_USE_ES6_CODE
 #if defined(GLUE_USE_ES6_CODE)
 
   EM_ASM(
@@ -178,6 +177,7 @@ Module.__glueCreateClass = function (members) {
   var C = function C() {
     if ((arguments.length <= 0 ? undefined : arguments[0]) === "__glue_use_value") {
       this.__glue_instance = arguments.length <= 1 ? undefined : arguments[1];
+
       Module.__glueConstructCallback(this.__glue_instance);
     } else {
       this.__glue_instance = constructor.apply(void 0, arguments).__glue_instance;
