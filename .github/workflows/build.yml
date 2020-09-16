@@ -17,6 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: mymindstorm/setup-emsdk@v6
+        with:
+          version: 1.38.40
 
       - uses: actions/checkout@v1
 
