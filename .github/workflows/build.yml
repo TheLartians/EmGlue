@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: mymindstorm/setup-emsdk@v6
         with:
-          version: 1.38.40
+          version: 1.39.20
 
       - uses: actions/checkout@v1
 
