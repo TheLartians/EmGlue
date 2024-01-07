@@ -11,7 +11,7 @@ void exampleBasics() {
   // run JS code
   state.run("console.log('Hello JavaScript!')");
 
-  // extract values
+  // extract values from JS
   std::cout << state.run("'Hello' + ' ' + 'C++!'")->get<std::string>() << std::endl;
 
   // extract maps
@@ -19,7 +19,7 @@ void exampleBasics() {
   map["a"]->get<int>(); // -> 1
 
   // extract functions
-  auto f = state.run("(function(a,b){ return a+b })").asFunction();
+  auto f = state.run("(a,b) => { return a+b }").asFunction();
   f(3, 4).get<int>(); // -> 7
 
   // inject values
@@ -27,10 +27,14 @@ void exampleBasics() {
   global["x"] = 42;
   global["square"] = [](double x){ return x*x; };
   
+  std::cout << "test" << std::endl;
+  std::cout << global["square"](global["x"])->get<float>() << std::endl;
+
   // interact with JS directly
-  state.run("console.log(square(x))");
+  state.run("console.log('square(x) =',square(x))");
+  
   // or using Glue
-  global["console"]["log"](global["square"](global["x"]));
+  global["console"]["log"]("square(x) =", global["square"](global["x"]));
 }
 
 struct A {
@@ -54,8 +58,8 @@ void exampleModules() {
   state.addModule(module, state.root());
 
   state.run("a = new A('test');");
-  state.run("console.log(a.member());");
-  state.run("console.log(a.method());");
+  state.run("console.log('a.member() =',a.member());");
+  state.run("console.log('a.method() =', a.method());");
   
   // there are no destructors in JavaScript 
   // -> be sure to delete your instances after use!

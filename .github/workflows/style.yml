@@ -4,23 +4,32 @@ on:
   push:
     branches:
       - master
+      - main
   pull_request:
     branches:
       - master
+      - main
+
+env:
+  CPM_SOURCE_CACHE: ${{ github.workspace }}/cpm_modules
 
 jobs:
   build:
+    runs-on: ubuntu-latest
 
-    runs-on: macos-latest
-    
     steps:
-    - uses: actions/checkout@v1
-    
-    - name: Install clang-format
-      run: brew install clang-format
+      - uses: actions/checkout@v3
 
-    - name: configure
-      run: cmake -Htest -Bbuild
+      - uses: actions/cache@v3
+        with:
+          path: "**/cpm_modules"
+          key: ${{ github.workflow }}-cpm-modules-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
 
-    - name: check style
-      run: cmake --build build --target check-format
+      - name: Install format dependencies
+        run: pip3 install clang-format==14.0.6 cmake_format==0.6.11 pyyaml
+
+      - name: configure
+        run: cmake -Stest -Bbuild
+
+      - name: check style
+        run: cmake --build build --target check-format
