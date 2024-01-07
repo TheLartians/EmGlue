@@ -45,36 +45,37 @@ EMSCRIPTEN_BINDINGS(glue_bindings) {
   constant("__glueContext", glue::Context());
 
   // clang-format off
-#if defined(GLUE_USE_ES6_CODE)
-
   EM_ASM(
-    Module.__glueScriptRunner = function(code) {
+    Module.__glueScriptRunner = (script) => {
       try {
-        return eval(code);
+        return eval(script);
       } catch (e) {
         return {__glue_error: String(e)};
       }
     };
 
-    Module.__glueInvoker = function(callback, args) {
+    Module.__glueInvoker = (callback, args) => {
       return callback(...args);
     };
 
-    Module.__glueFunctionWrapper = function(callback) {
+    Module.__glueFunctionWrapper = (rawCallback) => {
       const invoker = Module.invokeAnyFunction;
-      return function(...args) {
-        return invoker(callback, args);
-      }
+      const callback = rawCallback.clone();
+      // ensure callback gets deleted if a construct callback is set
+      Module.__glueConstructCallback(callback);
+      const result = (...args) => invoker(callback, args);
+      result.delete = () => callback.delete();
+      return result;
     };
 
-    Module.__glueIsAny = function(val) {
+    Module.__glueIsAny = (val) => {
       return val instanceof Module.Any;
     };
 
     Module.__glueConstructCallback = () => {};
     Module.__setGlueConstructCallback = (f) => Module.__glueConstructCallback = f;
 
-    Module.__glueCreateClass = function(members) {
+    Module.__glueCreateClass = (members) => {
       const constructor = members[Module.constructorKey];
       const C = function(...args) {
         if (args[0] === "__glue_use_value") {
@@ -111,131 +112,10 @@ EMSCRIPTEN_BINDINGS(glue_bindings) {
       return C;
     };
 
-    Module.__glueDeleter = function(v){ v.delete(); };
-    Module.__glueGlobal = this;
+    Module.__glueDeleter = (v) => { v.delete(); };
+    Module.__glueGlobal = globalThis;
     Module.__glueModule = Module;
   ,);
-
-#else
-/**
- * The content of the EM_ASM below is a backwards-compatible version of the readable code above.
- */
-
-  EM_ASM(
-function _instanceof(left, right) { if (right != null && typeof Symbol !== "undefined" && right[Symbol.hasInstance]) { return !!right[Symbol.hasInstance](left); } else { return left instanceof right; } }
-
-function _toConsumableArray(arr) { return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _unsupportedIterableToArray(arr) || _nonIterableSpread(); }
-
-function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
-
-function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
-
-function _iterableToArray(iter) { if (typeof Symbol !== "undefined" && Symbol.iterator in Object(iter)) return Array.from(iter); }
-
-function _arrayWithoutHoles(arr) { if (Array.isArray(arr)) return _arrayLikeToArray(arr); }
-
-function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
-
-Module.__glueScriptRunner = function (code) {
-  try {
-    return eval(code);
-  } catch (e) {
-    return {
-      __glue_error: String(e)
-    };
-  }
-};
-
-Module.__glueInvoker = function (callback, args) {
-  return callback.apply(void 0, _toConsumableArray(args));
-};
-
-Module.__glueFunctionWrapper = function (callback) {
-  var invoker = Module.invokeAnyFunction;
-  return function () {
-    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
-      args[_key] = arguments[_key];
-    }
-
-    return invoker(callback, args);
-  };
-};
-
-Module.__glueIsAny = function (val) {
-  return _instanceof(val, Module.Any);
-};
-
-Module.__glueConstructCallback = function () {};
-
-Module.__setGlueConstructCallback = function (f) {
-  return Module.__glueConstructCallback = f;
-};
-
-Module.__glueCreateClass = function (members) {
-  var constructor = members[Module.constructorKey];
-
-  var C = function C() {
-    if ((arguments.length <= 0 ? undefined : arguments[0]) === "__glue_use_value") {
-      this.__glue_instance = arguments.length <= 1 ? undefined : arguments[1];
-
-      Module.__glueConstructCallback(this.__glue_instance);
-    } else {
-      this.__glue_instance = constructor.apply(void 0, arguments).__glue_instance;
-    }
-  };
-
-  if (members[Module.extendsKey]) {
-    C.prototype = Object.create(members[Module.extendsKey].prototype);
-  } else {
-    C.prototype = {
-      delete: function _delete() {
-        this.__glue_instance.delete();
-      }
-    };
-  }
-
-  if (members[Module.toStringKey]) {
-    var stringConverter = members[Module.toStringKey];
-
-    C.prototype.toString = function () {
-      return stringConverter(this);
-    };
-  }
-
-  var _loop = function _loop(key) {
-    var member = members[key];
-
-    C.prototype[key] = function () {
-      for (var _len2 = arguments.length, args = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-        args[_key2] = arguments[_key2];
-      }
-
-      return member.apply(void 0, [this.__glue_instance].concat(args));
-    };
-
-    C[key] = member;
-  };
-
-  for (var key in members) {
-    _loop(key);
-  }
-
-  members['__constructWithValue'] = function (value) {
-    return new C("__glue_use_value", value);
-  };
-
-  return C;
-};
-
-Module.__glueDeleter = function (v) {
-  v.delete();
-};
-
-Module.__glueGlobal = this;
-Module.__glueModule = Module;
-  ,);
-#endif
-
   // clang-format on
   }
 

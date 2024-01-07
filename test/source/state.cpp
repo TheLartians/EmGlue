@@ -3,6 +3,17 @@
 #include <glue/emscripten/state.h>
 #include <glue/view.h>
 
+namespace {
+  static int instanceCount = 0;
+
+  struct InstanceTracker {
+    InstanceTracker() { instanceCount++; }
+    InstanceTracker(const InstanceTracker &) { instanceCount++; }
+    InstanceTracker(InstanceTracker &&) { instanceCount++; }
+    ~InstanceTracker() { instanceCount--; }
+  };
+}  // namespace
+
 TEST_CASE("State") {
   glue::emscripten::State state;
 
@@ -43,32 +54,49 @@ TEST_CASE("Mapped Values") {
   }
 
   SUBCASE("callbacks") {
-    CHECK_NOTHROW(root["f"] = [](int x) { return 42 + x; });
-    auto view = glue::View(root);
-    REQUIRE(root["f"].asFunction());
-    CHECK(root["f"].asFunction()(3).get<int>() == 45);
-    CHECK(state.get<int>("f(10)") == 52);
-    CHECK_NOTHROW(state.run("g = function(a,b){ return a+b; }"));
-    CHECK(root["g"].asFunction()(2, 3).get<int>() == 5);
+    REQUIRE(instanceCount == 0);
+    SUBCASE("manual memory management") {
+      CHECK_NOTHROW(root["f"] = [captured = InstanceTracker()](int x) { return 42 + x; });
+      CHECK(instanceCount == 1);
+      auto view = glue::View(root);
+      REQUIRE(root["f"].asFunction());
+      CHECK(root["f"].asFunction()(3).get<int>() == 45);
+      CHECK(state.get<int>("f(10)") == 52);
+      CHECK_NOTHROW(state.run("g = function(a,b){ return a+b; }"));
+      CHECK(root["g"].asFunction()(2, 3).get<int>() == 5);
+      CHECK_NOTHROW(state.run("f.delete();"));
+      CHECK(instanceCount == 0);
+    }
+    SUBCASE("semi-automatic memory management") {
+      root["setConstructCallback"] = state.getConstructCallbackSetter();
+      state.run("values = []");
+      CHECK_NOTHROW(state.run("setConstructCallback(v => values.push(v));"));
+      CHECK_NOTHROW(root["f"] = [captured = InstanceTracker()](int x) { return 42 + x; });
+      CHECK(instanceCount == 1);
+      CHECK_NOTHROW(state.run("check(values.length == 1)"));
+      CHECK_NOTHROW(state.run("for (const v of values) { v.delete(); }"));
+      CHECK(instanceCount == 0);
+    }
   }
 
   SUBCASE("any") {
-    static thread_local int counter = 0;
     struct A {
       int value;
-      A(int v) : value(v) { counter++; }
-      A(A &&o) : value(o.value) { counter++; }
+      InstanceTracker tracker;
+      A(int v) : value(v) {}
+      A(A &&o) : value(o.value) {}
       A(const A &) = delete;
-      ~A() { counter--; }
     };
+    REQUIRE(instanceCount == 0);
+
     SUBCASE("Manual memory management") {
       CHECK_NOTHROW(root["a"] = A{43});
       CHECK(root["a"]->get<const A &>().value == 43);
       CHECK_NOTHROW(root["a"]->get<A &>().value = 3);
       CHECK(root["a"]->get<const A &>().value == 3);
-      CHECK(counter == 1);
+      CHECK(instanceCount == 1);
       state.run("a.delete(); a = undefined;");
-      CHECK(counter == 0);
+      CHECK(instanceCount == 0);
     }
     SUBCASE("semi-automatic memory management") {
       root["setConstructCallback"] = state.getConstructCallbackSetter();
@@ -76,10 +104,10 @@ TEST_CASE("Mapped Values") {
       CHECK_NOTHROW(state.run("setConstructCallback(v => values.push(v));"));
       CHECK_NOTHROW(root["a"] = A{15});
       CHECK(root["a"]->get<const A &>().value == 15);
-      CHECK(counter == 1);
+      CHECK(instanceCount == 1);
       CHECK_NOTHROW(state.run("check(values.length == 1)"));
       CHECK_NOTHROW(state.run("for (const v of values) { v.delete(); }"));
-      CHECK(counter == 0);
+      CHECK(instanceCount == 0);
     }
   }
 
@@ -113,14 +141,7 @@ TEST_CASE("Passthrough arguments") {
 }
 
 TEST_CASE("Modules") {
-  static int instanceCount = 0;
-
-  struct InstanceTracker {
-    InstanceTracker() { instanceCount++; }
-    InstanceTracker(const InstanceTracker &) { instanceCount++; }
-    InstanceTracker(InstanceTracker &&) { instanceCount++; }
-    ~InstanceTracker() { instanceCount--; }
-  };
+  REQUIRE(instanceCount == 0);
 
   struct A {
     std::string member;

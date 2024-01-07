@@ -1,37 +1,24 @@
-cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 
-project(EmGlueTests
-  LANGUAGES CXX
-)
+project(EmGlueTests LANGUAGES CXX)
 
 # ---- Dependencies ----
 
 include(../cmake/CPM.cmake)
 
-CPMAddPackage(
-  NAME doctest
-  GITHUB_REPOSITORY onqtam/doctest
-  GIT_TAG 2.3.7
-)
+cpmaddpackage("gh:onqtam/doctest@2.4.11")
+cpmaddpackage("gh:TheLartians/Format.cmake@1.7.3")
 
-if (TEST_INSTALLED_VERSION)
+if(TEST_INSTALLED_VERSION)
   find_package(EmGlue REQUIRED)
 else()
-  CPMAddPackage(
-    NAME EmGlue
-    SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/..
-  )
+  cpmaddpackage(NAME EmGlue SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/..)
 endif()
-
-CPMAddPackage(
-  NAME Format.cmake
-  GITHUB_REPOSITORY TheLartians/Format.cmake
-  VERSION 1.3
-)
 
 # ---- Enable compiler warnings ----
 
-target_compile_options(EmGlue PUBLIC -Wall -pedantic -Wextra -Werror -Wno-dollar-in-identifier-extension)
+target_compile_options(EmGlue PUBLIC -Wall -pedantic -Wextra -Werror
+                                     -Wno-dollar-in-identifier-extension)
 
 # ---- Create binary ----
 

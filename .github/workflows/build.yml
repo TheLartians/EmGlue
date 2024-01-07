@@ -11,16 +11,26 @@ on:
 env:
   CTEST_OUTPUT_ON_FAILURE: 1
   CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-    
+  CPM_SOURCE_CACHE: ${{ github.workspace }}/cpm_modules
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v3
+
       - uses: mymindstorm/setup-emsdk@v10
         with:
-          version: 2.0.31
+          version: 3.1.51
 
-      - uses: actions/checkout@v1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - uses: actions/cache@v3
+        with:
+          path: "**/cpm_modules"
+          key: ${{ github.workflow }}-cpm-modules-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
 
       - name: configure
         run: emcmake cmake -Htest -Bbuild
